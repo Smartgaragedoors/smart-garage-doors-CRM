@@ -1,0 +1,119 @@
+-- Fix Duplicates First, Then Reverse Count Values
+-- Run this in your Supabase SQL editor
+
+-- 1. First, let's see what duplicates exist
+SELECT "Count", COUNT(*) as duplicate_count
+FROM all_jobs 
+GROUP BY "Count"
+HAVING COUNT(*) > 1
+ORDER BY "Count";
+
+-- 2. Show all records with their current Count values
+SELECT "Count", "Client Name", "Date", "Sales"
+FROM all_jobs 
+ORDER BY CAST("Count" AS INTEGER) DESC
+LIMIT 20;
+
+-- 3. Count total records
+SELECT COUNT(*) as total_records FROM all_jobs;
+
+-- 4. Add a temporary column to store new Count values
+ALTER TABLE all_jobs ADD COLUMN temp_count TEXT;
+
+-- 5. Create a temporary table with unique sequential Count values
+CREATE TEMP TABLE count_mapping AS
+WITH ordered_jobs AS (
+  SELECT 
+    "Count" as old_count,
+    ROW_NUMBER() OVER (ORDER BY CAST("Count" AS INTEGER) DESC) as row_num
+  FROM all_jobs
+)
+SELECT 
+  old_count,
+  250000 + row_num as new_count
+FROM ordered_jobs;
+
+-- 6. Show the mapping (first 10 records)
+SELECT old_count, new_count
+FROM count_mapping
+ORDER BY new_count DESC
+LIMIT 10;
+
+-- 7. Update the temporary column with new Count values
+UPDATE all_jobs 
+SET temp_count = CAST(cm.new_count AS TEXT)
+FROM count_mapping cm
+WHERE all_jobs."Count" = cm.old_count;
+
+-- 8. Remove default value from Count column
+ALTER TABLE all_jobs ALTER COLUMN "Count" DROP DEFAULT;
+
+-- 9. Drop existing sequence
+DROP SEQUENCE IF EXISTS all_jobs_count_seq CASCADE;
+
+-- 10. Now safely update Count column using the temporary column
+UPDATE all_jobs 
+SET "Count" = temp_count;
+
+-- 11. Drop the temporary column
+ALTER TABLE all_jobs DROP COLUMN temp_count;
+
+-- 12. Create new sequence starting from the highest Count + 1
+DO $$
+DECLARE
+    max_count INTEGER;
+    total_records INTEGER;
+BEGIN
+    -- Get total number of records
+    SELECT COUNT(*) INTO total_records FROM all_jobs;
+    
+    -- Calculate starting point (250000 + total records)
+    max_count := 250000 + total_records;
+    
+    -- Create sequence starting from max_count + 1
+    EXECUTE format('CREATE SEQUENCE all_jobs_count_seq START %s', max_count + 1);
+    
+    RAISE NOTICE 'Total records: %', total_records;
+    RAISE NOTICE 'Created sequence starting from: %', max_count + 1;
+END $$;
+
+-- 13. Set default value for Count column (simple numeric format)
+ALTER TABLE all_jobs ALTER COLUMN "Count" SET DEFAULT CAST(nextval('all_jobs_count_seq') AS TEXT);
+
+-- 14. Make sequence owned by column
+ALTER SEQUENCE all_jobs_count_seq OWNED BY all_jobs."Count";
+
+-- 15. Verify the updates
+SELECT "Count", "Client Name", "Date", "Sales"
+FROM all_jobs 
+ORDER BY CAST("Count" AS INTEGER) DESC
+LIMIT 10;
+
+-- 16. Verify the sequence is correct
+SELECT 
+    last_value as current_sequence_value,
+    (SELECT MAX(CAST("Count" AS INTEGER)) FROM all_jobs) as highest_count,
+    CAST(nextval('all_jobs_count_seq') AS TEXT) as next_count_value
+FROM all_jobs_count_seq;
+
+-- 17. Test the sequence (this will use up 2 values)
+SELECT 
+    CAST(nextval('all_jobs_count_seq') AS TEXT) as test_value_1,
+    CAST(nextval('all_jobs_count_seq') AS TEXT) as test_value_2;
+
+-- 18. Reset sequence back (subtract 2 since we used nextval twice)
+SELECT setval('all_jobs_count_seq', (SELECT last_value FROM all_jobs_count_seq) - 2);
+
+-- 19. Final verification
+SELECT 
+    'Next Count value will be:' as message,
+    CAST(nextval('all_jobs_count_seq') AS TEXT) as next_value;
+
+-- 20. Show sample of updated records
+SELECT "Count", "Client Name", "Date", "Sales"
+FROM all_jobs 
+ORDER BY CAST("Count" AS INTEGER) DESC
+LIMIT 5;
+
+-- 21. Clean up temporary table
+DROP TABLE count_mapping;
