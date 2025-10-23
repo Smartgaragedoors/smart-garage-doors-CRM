@@ -78,7 +78,14 @@ export default defineConfig({
     // Enhanced error reporting in build
     rollupOptions: {
       onwarn(warning, warn) {
-        // Report all warnings
+        // Suppress specific warnings that might cause deployment issues
+        if (warning.code === 'THIS_IS_UNDEFINED') {
+          return;
+        }
+        if (warning.code === 'CIRCULAR_DEPENDENCY') {
+          return;
+        }
+        // Report other warnings
         console.warn('Build warning:', warning);
         warn(warning);
       }
