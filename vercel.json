@@ -5,8 +5,7 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "out",
-        "buildCommand": "npm run build:deploy"
+        "distDir": "out"
       }
     }
   ],
@@ -18,6 +17,5 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "buildCommand": "npm run build:deploy"
+  }
 }
