@@ -14,7 +14,6 @@ export default defineConfig({
   plugins: [react({
     // Enable SWC error reporting
     plugins: [],
-    jsxImportSource: '@emotion/react',
     babel: {
       plugins: []
     }
