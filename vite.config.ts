@@ -11,7 +11,14 @@ export default defineConfig({
    __BASE_PATH__: JSON.stringify(base),
    __IS_PREVIEW__: JSON.stringify(isPreview)
   },
-  plugins: [react(),
+  plugins: [react({
+    // Enable SWC error reporting
+    plugins: [],
+    jsxImportSource: '@emotion/react',
+    babel: {
+      plugins: []
+    }
+  }),
     AutoImport({
       imports: [
         {
@@ -69,6 +76,14 @@ export default defineConfig({
   build: {
     sourcemap: true,
     outDir: 'out',
+    // Enhanced error reporting in build
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Report all warnings
+        console.warn('Build warning:', warning);
+        warn(warning);
+      }
+    }
   },
   resolve: {
     alias: {
@@ -78,5 +93,13 @@ export default defineConfig({
   server: {
     port: 3000,
     host: '0.0.0.0',
+    // Enhanced error reporting in dev server
+    hmr: {
+      overlay: true
+    }
+  },
+  // Enable error overlay
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' }
   }
 })
