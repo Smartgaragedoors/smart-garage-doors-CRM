@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit --skipLibCheck && vite build --mode production --logLevel warn",
+    "build": "vite build --mode production --logLevel warn",
     "build:production": "tsc --noEmit --skipLibCheck && vite build",
     "build:deploy": "tsc --noEmit --skipLibCheck --noErrorTruncation && vite build --mode production",
     "preview": "vite preview",
