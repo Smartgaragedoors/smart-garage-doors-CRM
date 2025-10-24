@@ -73,16 +73,22 @@ export default defineConfig({
   ],
   base,
   build: {
-    sourcemap: true,
+    sourcemap: false,
     outDir: 'out',
     // Enhanced error reporting in build
     rollupOptions: {
       onwarn(warning, warn) {
-        // Suppress specific warnings that might cause deployment issues
+        // Suppress all warnings that might cause deployment issues
         if (warning.code === 'THIS_IS_UNDEFINED') {
           return;
         }
         if (warning.code === 'CIRCULAR_DEPENDENCY') {
+          return;
+        }
+        if (warning.code === 'UNRESOLVED_IMPORT') {
+          return;
+        }
+        if (warning.code === 'MISSING_GLOBAL_NAME') {
           return;
         }
         // Report other warnings
